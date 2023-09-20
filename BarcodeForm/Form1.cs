@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Input;
@@ -58,8 +59,6 @@ namespace BarcodeForm
     }
 
 
-
-
     public class LowLevelKeyboardListener
     {
         private const int WH_KEYBOARD_LL = 13;
@@ -89,12 +88,18 @@ namespace BarcodeForm
         DateTime _lastKeystroke = new DateTime(0);
         List<string> _barcode = new List<string>();
 
-        public Form _Form { get; }
+        TimerExample timerExample;
 
-        public LowLevelKeyboardListener(Form form)
+        public Form Main { get; }
+
+        public LowLevelKeyboardListener(Form main)
         {
             _proc = HookCallback;
-            _Form = form;
+
+            timerExample = new TimerExample();
+            timerExample.TimeCrossedSpecificTime += Invoke;
+            timerExample.ReRun();
+            Main = main;
         }
 
         public void HookKeyboard()
@@ -103,7 +108,6 @@ namespace BarcodeForm
 
             _lastKeystroke = new DateTime(0);
             _barcode = new List<string>();
-
         }
 
         public void UnHookKeyboard()
@@ -127,18 +131,8 @@ namespace BarcodeForm
                 int vkCode = Marshal.ReadInt32(lParam);
                 var key = KeyInterop.KeyFromVirtualKey(vkCode);
 
-
-                TimeSpan elapsed = (DateTime.Now - _lastKeystroke);
-
-                var afterLongTime = elapsed.TotalMilliseconds > 25;
-
-                if (afterLongTime)
-                {
-                    if (_barcode.Count > 9)
-                        Invoke();
-                    _barcode.Clear();
-                }
-
+                if (_barcode.Count < 1)
+                    timerExample.ReRun();
 
                 if (Keys.IsNumber.Any(x => x == (int)key))
                     _barcode.Add(key.ToString().Replace("D", ""));
@@ -146,50 +140,56 @@ namespace BarcodeForm
                 if (Keys.IsAlpha.Any(x => x == (int)key))
                     _barcode.Add(key.ToString());
 
-                _lastKeystroke = DateTime.Now;
 
-                if ((int)key == 6 && _barcode.Count > 9)
-                {
-                    ControlTyping(true, string.Join("", _barcode));
+                if (key == Key.Enter && _barcode.Count > 9)
                     Invoke();
-                    _barcode.Clear();
-                }
-
-
-
-                void Invoke()
-                {
-                    var f = string.Join("", _barcode.Select(x => x.Replace("D", ""))) + Environment.NewLine;
-                    //f += Environment.NewLine;
-                    if (OnKeyPressed != null)
-                        OnKeyPressed(this, new KeyPressedArgs(f));
-                }
-
-                void ControlTyping(bool status = false, string txt = "")
-                {
-                    var f = FindFocusedControl(_Form);
-                    if (f is TextBox)
-                    {
-                        var t = (TextBox)f;
-                        if (status == true && txt.Length > 0)
-                        {
-                            t.Text = t.Text.Replace(txt, "");
-                            t.Select(t.Text.Length, 0);
-                        }
-                    }
-                }
-
-                Control FindFocusedControl(Control control)
-                {
-                    var container = control as ContainerControl;
-                    return (null != container
-                        ? FindFocusedControl(container.ActiveControl)
-                        : control);
-                }
 
             }
 
             return CallNextHookEx(_hookID, nCode, wParam, lParam);
+        }
+
+
+        void Invoke(object sender = null, EventArgs e = null)
+        {
+            if (_barcode.Count < 9)
+            {
+                _barcode.Clear();
+                return;
+            }
+
+
+
+            var f = string.Join("", _barcode.Select(x => x.Replace("D", ""))) + Environment.NewLine;
+            _barcode.Clear();
+            //f += Environment.NewLine;
+            if (OnKeyPressed != null)
+            {
+                OnKeyPressed(this, new KeyPressedArgs(f));
+                ControlTyping(f);
+            }
+        }
+
+        void ControlTyping(string txt = "")
+        {
+            var f = FindFocusedControl(Main);
+            if (f is TextBox)
+            {
+                var t = (TextBox)f;
+                if (txt.Length > 0)
+                {
+                    t.Text = t.Text.Replace(txt.Replace("\r", "").Replace("\n", ""), "");
+                    t.Select(t.Text.Length, 0);
+                }
+            }
+        }
+
+        Control FindFocusedControl(Control control)
+        {
+            var container = control as ContainerControl;
+            return (null != container
+                ? FindFocusedControl(container.ActiveControl)
+                : control);
         }
     }
 
@@ -264,5 +264,39 @@ namespace BarcodeForm
             68,
             69,
         };
+    }
+
+
+    public class TimerExample
+    {
+        public event EventHandler TimeCrossedSpecificTime;
+        public static System.Timers.Timer timer = new System.Timers.Timer(1);
+        private DateTime specificTime;
+
+        public TimerExample()
+        {
+            timer.Elapsed += TimerElapsed;
+            ReRun();
+        }
+        public void ReRun()
+        {
+            specificTime = DateTime.Now.AddMilliseconds(100);
+            timer.Interval = 1;
+            timer.Start();
+        }
+
+        private void TimerElapsed(object sender, ElapsedEventArgs e)
+        {
+            if (DateTime.Now >= specificTime)
+            {
+                timer.Stop();
+                OnTimeCrossedSpecificTime(EventArgs.Empty);
+            }
+        }
+
+        protected virtual void OnTimeCrossedSpecificTime(EventArgs e)
+        {
+            TimeCrossedSpecificTime?.Invoke(this, e);
+        }
     }
 }
