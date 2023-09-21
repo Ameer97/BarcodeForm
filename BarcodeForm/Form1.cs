@@ -143,6 +143,9 @@ namespace BarcodeForm
                 if (Keys.IsAlpha.Any(x => x == (int)key))
                     _barcode.Add(key.ToString());
 
+                if ((int)key == 84)
+                    _barcode.Add("*");
+
 
                 if (key == Key.Enter && _barcode.Count > 9)
                     Invoke();
@@ -279,7 +282,6 @@ namespace BarcodeForm
             67,
             68,
             69,
-            84 // *
         };
     }
 
