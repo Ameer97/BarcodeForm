@@ -37,7 +37,10 @@ namespace BarcodeForm
 
         void _listener_OnKeyPressed(object sender, KeyPressedArgs e)
         {
-            this.label1.Text = e.KeyPressed.ToString();
+            this.Invoke((MethodInvoker)delegate
+            {
+                this.label1.Text = e.KeyPressed.ToString();
+            });
         }
 
         public static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
@@ -166,7 +169,15 @@ namespace BarcodeForm
             if (OnKeyPressed != null)
             {
                 OnKeyPressed(this, new KeyPressedArgs(f));
-                ControlTyping(f);
+
+                Task.Delay(new TimeSpan(0, 0, 0, 0, 40)).ContinueWith(o =>
+                {
+                    Main.Invoke((MethodInvoker)delegate
+                    {
+                        ControlTyping(f);
+                    });
+                });
+                
             }
         }
 
