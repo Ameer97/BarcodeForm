@@ -146,6 +146,9 @@ namespace BarcodeForm
                 if ((int)key == 84)
                     _barcode.Add("*");
 
+                if ((int)key == 87)
+                    _barcode.Add("-");
+
 
                 if (key == Key.Enter && _barcode.Count > 9)
                     Invoke();
