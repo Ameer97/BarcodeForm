@@ -279,6 +279,7 @@ namespace BarcodeForm
             67,
             68,
             69,
+            84 // *
         };
     }
 
