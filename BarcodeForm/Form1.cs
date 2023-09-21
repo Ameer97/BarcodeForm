@@ -183,15 +183,20 @@ namespace BarcodeForm
 
         void ControlTyping(string txt = "")
         {
+            if (txt.Length < 1)
+                return;
             var f = FindFocusedControl(Main);
             if (f is TextBox)
             {
                 var t = (TextBox)f;
-                if (txt.Length > 0)
-                {
-                    t.Text = t.Text.Replace(txt.Replace("\r", "").Replace("\n", ""), "");
-                    t.Select(t.Text.Length, 0);
-                }
+                t.Text = t.Text.Replace(txt.Replace("\r", "").Replace("\n", ""), "");
+                t.Select(t.Text.Length, 0);
+            }
+            if (f is ComboBox)
+            {
+                var t = (ComboBox)f;
+                t.Text = t.Text.Replace(txt.Replace("\r", "").Replace("\n", ""), "");
+                t.Select(t.Text.Length, 0);
             }
         }
 
